@@ -1,9 +1,6 @@
-package com.codacy.analysis.cli.files
+package com.codacy.analysis.core.files
 
 import better.files.File
-import com.codacy.analysis.core.clients.api.ProjectConfiguration
-import com.codacy.analysis.core.configuration.CodacyConfigurationFile
-import com.codacy.analysis.core.files.{FallbackFileCollector, FileCollector, FileCollectorCompanion, FilesTarget}
 import org.specs2.control.NoLanguageFeatures
 import org.specs2.mutable.Specification
 
@@ -15,9 +12,7 @@ class FallbackFileCollectorSpec extends Specification with NoLanguageFeatures {
     override def name: String = ""
 
     override def apply(): FileCollector[Try] = new FileCollector[Try] {
-      override def list(directory: File,
-                        localConfiguration: Either[String, CodacyConfigurationFile],
-                        remoteConfiguration: Either[String, ProjectConfiguration]): Try[FilesTarget] = {
+      override def list(directory: File): Try[FilesTarget] = {
         Failure(new Exception("because fail"))
       }
     }
@@ -27,9 +22,7 @@ class FallbackFileCollectorSpec extends Specification with NoLanguageFeatures {
     override def name: String = ""
 
     override def apply(): FileCollector[Try] = new FileCollector[Try] {
-      override def list(directory: File,
-                        localConfiguration: Either[String, CodacyConfigurationFile],
-                        remoteConfiguration: Either[String, ProjectConfiguration]): Try[FilesTarget] = {
+      override def list(directory: File): Try[FilesTarget] = {
         Success(FilesTarget(directory, Set.empty, Set.empty))
       }
     }
@@ -37,18 +30,15 @@ class FallbackFileCollectorSpec extends Specification with NoLanguageFeatures {
 
   "FallbackFileCollectorSpec" should {
     "not fallback" in {
-      new FallbackFileCollector(List(successfulCompanion, failingCompanion))
-        .list(File(""), Left(""), Left("")) must beSuccessfulTry
+      new FallbackFileCollector(List(successfulCompanion, failingCompanion)).list(File("")) must beSuccessfulTry
     }
 
     "fallback" in {
-      new FallbackFileCollector(List(failingCompanion, successfulCompanion))
-        .list(File(""), Left(""), Left("")) must beSuccessfulTry
+      new FallbackFileCollector(List(failingCompanion, successfulCompanion)).list(File("")) must beSuccessfulTry
     }
 
     "fail when all fail" in {
-      new FallbackFileCollector(List(failingCompanion, failingCompanion))
-        .list(File(""), Left(""), Left("")) must beFailedTry
+      new FallbackFileCollector(List(failingCompanion, failingCompanion)).list(File("")) must beFailedTry
     }
   }
 }

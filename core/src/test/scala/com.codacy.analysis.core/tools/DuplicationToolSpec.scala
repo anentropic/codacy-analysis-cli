@@ -30,7 +30,7 @@ class DuplicationToolSpec extends Specification with NoLanguageFeatures {
             Set(DuplicationCloneFile("test.js", 1, 22), DuplicationCloneFile("test.js", 33, 54))))
 
         val result = for {
-          fileTarget <- FileCollector.defaultCollector().list(directory, Left("not needed"), Left("not needed"))
+          fileTarget <- FileCollector.defaultCollector().list(directory)
           duplicationTool = new DuplicationTool(PmdCpd, Languages.Javascript)
           duplicationToolResult <- duplicationTool.run(directory, fileTarget.readableFiles)
         } yield duplicationToolResult
@@ -55,7 +55,7 @@ class DuplicationToolSpec extends Specification with NoLanguageFeatures {
             Set(DuplicationCloneFile("test.js", 1, 22), DuplicationCloneFile("test.js", 33, 54))))
 
         val result = for {
-          fileTarget <- FileCollector.defaultCollector().list(directory, Left("not needed"), Left("not needed"))
+          fileTarget <- FileCollector.defaultCollector().list(directory)
           duplicationTool = new DuplicationTool(PmdCpd, Languages.Javascript)
           filteredFileTarget = fileTarget.readableFiles.filterNot(_.endsWith("test2.js"))
           duplicationToolResult <- duplicationTool.run(directory, filteredFileTarget)

@@ -47,26 +47,28 @@ class AnalyseExecutor(toolInput: Option[String],
       overrideFilePermissions(directory)
     }
 
-    val filesTargetAndTool: Either[CLIError, (FilesTarget, Set[ITool])] = for {
-      filesTarget <- fileCollector
-        .list(directory, localConfigurationFile, remoteProjectConfiguration)
-        .toRight(CLIError.FilesAccessError)
+    val filesTargetAndTool: Either[CLIError, (FilesTarget, FilesTarget, Set[ITool])] = for {
+      allFilesTarget <- fileCollector.list(directory).toRight(CLIError.FilesAccessError)
+      filteredGlobalFilesTarget = fileCollector
+        .filterGlobal(allFilesTarget, localConfigurationFile, remoteProjectConfiguration)
       tools <- allTools(
         toolInput,
         remoteProjectConfiguration,
-        LanguagesHelper.fromFileTarget(filesTarget, localConfigurationFile),
+        LanguagesHelper.fromFileTarget(filteredGlobalFilesTarget, localConfigurationFile),
         allowNetwork)
-    } yield (filesTarget, tools)
+    } yield (allFilesTarget, filteredGlobalFilesTarget, tools)
 
     val analysisResult: Either[CLIError, Seq[ExecutorResult[_]]] = filesTargetAndTool.map {
-      case (allFiles, tools) =>
+      case (allFiles, filteredGlobalFiles, tools) =>
         SetOps.mapInParallel[ITool, ExecutorResult[_]](tools, nrParallelTools) { tool: ITool =>
           val filteredFiles: FilesTarget =
-            fileCollector.filter(tool, allFiles, localConfigurationFile, remoteProjectConfiguration)
+            fileCollector.filterTool(tool, filteredGlobalFiles, localConfigurationFile, remoteProjectConfiguration)
 
           tool match {
             case tool: Tool =>
-              val analysisResults = issues(tool, filteredFiles, localConfigurationFile)
+              // We need allFiles since config files might not be supported languages
+              val toolHasConfigFile = fileCollector.hasConfigurationFiles(tool, allFiles)
+              val analysisResults = issues(tool, filteredFiles, localConfigurationFile, toolHasConfigFile)
               IssuesToolExecutorResult(tool.name, filteredFiles.readableFiles, analysisResults)
             case metricsTool: MetricsTool =>
               val analysisResults =
@@ -110,14 +112,12 @@ class AnalyseExecutor(toolInput: Option[String],
 
   private def issues(tool: Tool,
                      analysisFilesTarget: FilesTarget,
-                     localConfigurationFile: Either[String, CodacyConfigurationFile]): Try[Set[ToolResult]] = {
-
-    val toolHasConfigFiles = fileCollector.hasConfigurationFiles(tool, analysisFilesTarget)
-
+                     localConfigurationFile: Either[String, CodacyConfigurationFile],
+                     toolHasConfigFile: Boolean): Try[Set[ToolResult]] = {
     for {
       toolConfiguration <- getToolConfiguration(
         tool,
-        toolHasConfigFiles,
+        toolHasConfigFile,
         localConfigurationFile,
         remoteProjectConfiguration)
       results <- analyser

@@ -348,11 +348,12 @@ abstract class FileCollectorSpec(fileCollector: FileCollector[Try]) extends Spec
         val tool = toolCollector.from("brakeman", Set(Languages.Ruby)).right.get.head
 
         val result = for {
-          filesTargetGlobal <- fileCollector.list(
-            directory,
+          filesTargetAll <- fileCollector.list(directory)
+          filesTargetGlobal = fileCollector.filterGlobal(
+            filesTargetAll,
             "Local configuration not found".asLeft,
             "Remote configuration not found".asLeft)
-          filesTargetTool = fileCollector.filter(
+          filesTargetTool = fileCollector.filterTool(
             tool,
             filesTargetGlobal,
             "Local configuration not found".asLeft,
@@ -397,11 +398,12 @@ abstract class FileCollectorSpec(fileCollector: FileCollector[Try]) extends Spec
         val tool = toolCollector.from("scalastyle", Set(Languages.Scala)).right.get.head
 
         val result = for {
-          filesTargetGlobal <- fileCollector.list(
-            directory,
+          filesTargetAll <- fileCollector.list(directory)
+          filesTargetGlobal = fileCollector.filterGlobal(
+            filesTargetAll,
             "Local configuration not found".asLeft,
             remoteConfiguration)
-          filesTargetTool = fileCollector.filter(
+          filesTargetTool = fileCollector.filterTool(
             tool,
             filesTargetGlobal,
             "Local configuration not found".asLeft,
@@ -440,11 +442,12 @@ abstract class FileCollectorSpec(fileCollector: FileCollector[Try]) extends Spec
         val tool = toolCollector.from("scalastyle", Set(Languages.Scala)).right.get.head
 
         val result = for {
-          filesTargetGlobal <- fileCollector.list(
-            directory,
+          filesTargetAll <- fileCollector.list(directory)
+          filesTargetGlobal = fileCollector.filterGlobal(
+            filesTargetAll,
             localConfiguration,
             "Remote configuration not found".asLeft)
-          filesTargetTool = fileCollector.filter(
+          filesTargetTool = fileCollector.filterTool(
             tool,
             filesTargetGlobal,
             localConfiguration,
@@ -484,11 +487,12 @@ abstract class FileCollectorSpec(fileCollector: FileCollector[Try]) extends Spec
         val tool = toolCollector.from("scalastyle", Set(Languages.Scala)).right.get.head
 
         val result = for {
-          filesTargetGlobal <- fileCollector.list(
-            directory,
+          filesTargetAll <- fileCollector.list(directory)
+          filesTargetGlobal = fileCollector.filterGlobal(
+            filesTargetAll,
             "Local configuration not found".asLeft,
             remoteConfiguration)
-          filesTargetTool = fileCollector.filter(
+          filesTargetTool = fileCollector.filterTool(
             tool,
             filesTargetGlobal,
             "Local configuration not found".asLeft,
@@ -532,12 +536,9 @@ abstract class FileCollectorSpec(fileCollector: FileCollector[Try]) extends Spec
         val tool = toolCollector.from("scalastyle", Set(Languages.Scala)).right.get.head
 
         val result = for {
-          filesTargetGlobal <- fileCollector.list(directory, localConfiguration, remoteConfiguration)
-          filesTargetTool = fileCollector.filter(
-            tool,
-            filesTargetGlobal,
-            localConfiguration,
-            "Remote configuration not found".asLeft)
+          filesTargetAll <- fileCollector.list(directory)
+          filesTargetGlobal = fileCollector.filterGlobal(filesTargetAll, localConfiguration, remoteConfiguration)
+          filesTargetTool = fileCollector.filterTool(tool, filesTargetGlobal, localConfiguration, remoteConfiguration)
         } yield filesTargetTool
 
         result must beSuccessfulTry

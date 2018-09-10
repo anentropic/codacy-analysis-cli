@@ -3,8 +3,6 @@ package com.codacy.analysis.core.files
 import java.nio.file.Path
 
 import better.files.File
-import com.codacy.analysis.core.clients.api.ProjectConfiguration
-import com.codacy.analysis.core.configuration.CodacyConfigurationFile
 
 import scala.util.Try
 
@@ -14,9 +12,7 @@ private[files] final case class CheckedFiles(readableFiles: Set[Path], unreadabl
 
 class FileSystemFileCollector extends FileCollector[Try] {
 
-  override def list(directory: File,
-                    localConfiguration: Either[String, CodacyConfigurationFile],
-                    remoteConfiguration: Either[String, ProjectConfiguration]): Try[FilesTarget] = {
+  override def list(directory: File): Try[FilesTarget] = {
     Try {
       val allFiles =
         directory
@@ -25,9 +21,7 @@ class FileSystemFileCollector extends FileCollector[Try] {
           .filterNot(_.startsWith(".git"))
           .to[Set]
 
-      val filteredFiles = defaultFilter(allFiles, localConfiguration, remoteConfiguration)
-
-      val checkedFiles = checkPermissions(directory, filteredFiles)
+      val checkedFiles = checkPermissions(directory, allFiles)
 
       FilesTarget(directory, checkedFiles.readableFiles, checkedFiles.unreadableFiles)
     }

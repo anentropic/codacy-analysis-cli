@@ -27,14 +27,11 @@ trait FileCollector[T[_]] {
 
   protected val logger: Logger = getLogger
 
-  def list(directory: File,
-           localConfiguration: Either[String, CodacyConfigurationFile],
-           remoteConfiguration: Either[String, ProjectConfiguration]): T[FilesTarget]
+  def list(directory: File): T[FilesTarget]
 
-  protected def defaultFilter(allFiles: Set[Path],
-                              localConfiguration: Either[String, CodacyConfigurationFile],
-                              remoteConfiguration: Either[String, ProjectConfiguration]): Set[Path] = {
-
+  def filterGlobal(target: FilesTarget,
+                   localConfiguration: Either[String, CodacyConfigurationFile],
+                   remoteConfiguration: Either[String, ProjectConfiguration]): FilesTarget = {
     val autoIgnoresFilter: Set[Path] => Set[Path] = if (localConfiguration.isLeft) {
       excludeAutoIgnores(remoteConfiguration)
     } else {
@@ -44,19 +41,19 @@ trait FileCollector[T[_]] {
     val filters: Set[Set[Path] => Set[Path]] =
       Set(excludeGlobal(localConfiguration)(_), excludePrefixes(remoteConfiguration)(_), autoIgnoresFilter(_))
 
-    val filteredFiles = filters.foldLeft(allFiles) { case (fs, filter) => filter(fs) }
+    val filteredFiles = filters.foldLeft(target.readableFiles) { case (fs, filter) => filter(fs) }
 
-    filteredFiles
+    target.copy(readableFiles = filteredFiles)
   }
 
   def hasConfigurationFiles(tool: Tool, filesTarget: FilesTarget): Boolean = {
     filesTarget.readableFiles.exists(f => tool.configFilenames.exists(cf => f.endsWith(cf)))
   }
 
-  def filter(tool: ITool,
-             target: FilesTarget,
-             localConfiguration: Either[String, CodacyConfigurationFile],
-             remoteConfiguration: Either[String, ProjectConfiguration]): FilesTarget = {
+  def filterTool(tool: ITool,
+                 target: FilesTarget,
+                 localConfiguration: Either[String, CodacyConfigurationFile],
+                 remoteConfiguration: Either[String, ProjectConfiguration]): FilesTarget = {
 
     val filters =
       Set(
