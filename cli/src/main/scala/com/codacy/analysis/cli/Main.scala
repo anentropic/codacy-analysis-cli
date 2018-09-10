@@ -9,7 +9,7 @@ import com.codacy.analysis.cli.clients.Credentials
 import com.codacy.analysis.cli.command.analyse.AnalyseExecutor
 import com.codacy.analysis.cli.command.analyse.AnalyseExecutor._
 import com.codacy.analysis.cli.command.{Analyse, CLIApp, Command}
-import com.codacy.analysis.cli.configuration.CLIProperties.AnalysisProperties
+import com.codacy.analysis.cli.configuration.CLIProperties.{AnalysisProperties, UploadProperties}
 import com.codacy.analysis.cli.configuration.{CLIProperties, Environment}
 import com.codacy.analysis.cli.formatter.Formatter
 import com.codacy.analysis.core.analysis.Analyser
@@ -52,7 +52,7 @@ class MainImpl extends CLIApp {
         val analysisAndUpload = for {
           _ <- validate(properties)
           analysisResults <- analysis(Analyser(analyse.extras.analyser), properties.analysis)
-          _ <- upload(analyse, properties.upload.commitUuid, codacyClientOpt, analysisResults)
+          _ <- upload(properties.upload, codacyClientOpt, analysisResults)
         } yield {
           analysisResults
         }
@@ -90,15 +90,14 @@ class MainImpl extends CLIApp {
     new AnalyseExecutor(formatter, analyser, fileCollector, properties).run()
   }
 
-  private def upload(analyse: Analyse,
-                     commitUuid: Option[Commit.Uuid],
+  private def upload(properties: UploadProperties,
                      codacyClientOpt: Option[CodacyClient],
                      analysisResults: Seq[AnalyseExecutor.ExecutorResult[_]]): Either[CLIError, Unit] = {
 
     val uploadResultFut: Future[Either[String, Unit]] =
-      uploadResults(codacyClientOpt)(analyse.uploadValue, commitUuid, analysisResults)
+      uploadResults(codacyClientOpt)(properties.upload, properties.commitUuid, analysisResults)
 
-    if (analyse.uploadValue) {
+    if (properties.upload) {
       Try(Await.result(uploadResultFut, Duration.Inf)) match {
         case Failure(err) =>
           logger.error(err.getMessage)
